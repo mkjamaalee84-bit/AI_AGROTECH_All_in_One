@@ -1,31 +1,64 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  function owner(userId) { return request.auth != null && request.auth.uid == userId; }
-  match /users/{userId}/records/{recordId} {
-   allow read, delete: if owner(userId);
-   allow create, update: if owner(userId)
-    && request.resource.data.keys().hasOnly(['id','at','pond','ph','do','tan','temp','notes','updated','deleted'])
-    && request.resource.data.id == recordId
-    && request.resource.data.at is string && request.resource.data.updated is string
-    && request.resource.data.pond is string && request.resource.data.pond.size() <= 80
-    && request.resource.data.notes is string && request.resource.data.notes.size() <= 2000
-    && request.resource.data.deleted is bool
-    && request.resource.data.ph is number && request.resource.data.ph >= 0 && request.resource.data.ph <= 14
-    && request.resource.data.do is number && request.resource.data.do >= 0 && request.resource.data.do <= 30
-    && request.resource.data.tan is number && request.resource.data.tan >= 0 && request.resource.data.tan <= 1000
-    && request.resource.data.temp is number && request.resource.data.temp >= 0 && request.resource.data.temp <= 60;
+  function signedIn() {
+   return request.auth != null
+    && request.auth.token.firebase.sign_in_provider == 'password';
   }
-  match /users/{userId}/chats/{chatId} {
-   allow read, delete: if owner(userId);
-   allow create, update: if owner(userId)
-    && request.resource.data.keys().hasOnly(['id','title','expert','messages','updated','deleted'])
-    && request.resource.data.id == chatId
-    && request.resource.data.title is string && request.resource.data.title.size() <= 120
-    && request.resource.data.expert is string
-    && request.resource.data.messages is list
-    && request.resource.data.updated is string
-    && request.resource.data.deleted is bool;
+  function memberPath(companyId) {
+   return /databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid);
   }
+  function staff(companyId) {
+   return companyId == 'yp-agrotech-bioflok'
+    && signedIn()
+    && exists(memberPath(companyId))
+    && get(memberPath(companyId)).data.active == true
+    && get(memberPath(companyId)).data.role in ['staff', 'admin'];
+  }
+  function admin(companyId) {
+   return staff(companyId) && get(memberPath(companyId)).data.role == 'admin';
+  }
+  function validReport(d, reportId) {
+   return d.keys().hasAll(['id','at','pond','ph','do','tan','temp','notes','updated','deleted','createdBy','createdByName','source','createdAt','updatedAt'])
+    && d.keys().hasOnly(['id','at','pond','ph','do','tan','temp','notes','updated','deleted','createdBy','createdByName','source','createdAt','updatedAt'])
+    && reportId.matches('^[A-Za-z0-9_-]{10,100}$') && d.id == reportId
+    && d.at is string && d.at.size() <= 50
+    && d.updated is string && d.updated.size() <= 50
+    && d.pond is string && d.pond.size() > 0 && d.pond.size() <= 80
+    && d.notes is string && d.notes.size() <= 2000
+    && d.ph is number && d.ph >= 0 && d.ph <= 14
+    && d['do'] is number && d['do'] >= 0 && d['do'] <= 30
+    && d.tan is number && d.tan >= 0 && d.tan <= 1000
+    && d.temp is number && d.temp >= 0 && d.temp <= 60
+    && d.deleted is bool
+    && d.createdBy is string && d.createdByName is string && d.createdByName.size() <= 120
+    && d.source in ['live','legacy']
+    && d.createdAt is timestamp && d.updatedAt is timestamp;
+  }
+  match /companies/{companyId}/members/{userId} {
+   // A user may inspect only their own membership. Enrollment is admin-console-only.
+   allow get: if companyId == 'yp-agrotech-bioflok' && signedIn() && request.auth.uid == userId;
+   allow list, create, update, delete: if false;
+  }
+  match /companies/{companyId}/reports/{reportId} {
+   allow read: if staff(companyId);
+   allow create: if staff(companyId)
+    && validReport(request.resource.data, reportId)
+    && request.resource.data.createdBy == request.auth.uid
+    && request.resource.data.deleted == false
+    && request.resource.data.createdAt == request.time
+    && request.resource.data.updatedAt == request.time
+    && (request.resource.data.source == 'live' || admin(companyId));
+   // The author or an admin may soft-delete; the original measurement is immutable.
+   allow update: if staff(companyId)
+    && validReport(request.resource.data, reportId)
+    && (resource.data.createdBy == request.auth.uid || admin(companyId))
+    && resource.data.deleted == false && request.resource.data.deleted == true
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','updated','updatedAt'])
+    && request.resource.data.updatedAt == request.time;
+   allow delete: if false;
+  }
+  // Every other collection is denied unless you explicitly add reviewed rules.
+  match /{path=**} { allow read, write: if false; }
  }
 }

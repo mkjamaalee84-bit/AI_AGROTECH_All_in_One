@@ -1,6 +1,6 @@
 /* Only public app assets are cached. API calls and user data are never cached. */
 'use strict';
-const CACHE='ai-agrotech-shell-v1';
+const CACHE='ai-agrotech-shell-v2-staff';
 const LOCAL=['./','./index.html','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png'];
 const CDN=['https://cdn.tailwindcss.com/','https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
