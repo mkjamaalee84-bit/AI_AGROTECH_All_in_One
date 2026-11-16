@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function owner(userId) { return request.auth != null && request.auth.uid == userId; }
+  match /users/{userId}/records/{recordId} {
+   allow read, delete: if owner(userId);
+   allow create, update: if owner(userId)
+    && request.resource.data.keys().hasOnly(['id','at','pond','ph','do','tan','temp','notes','updated','deleted'])
+    && request.resource.data.id == recordId
+    && request.resource.data.at is string && request.resource.data.updated is string
+    && request.resource.data.pond is string && request.resource.data.pond.size() <= 80
+    && request.resource.data.notes is string && request.resource.data.notes.size() <= 2000
+    && request.resource.data.deleted is bool
+    && request.resource.data.ph is number && request.resource.data.ph >= 0 && request.resource.data.ph <= 14
+    && request.resource.data.do is number && request.resource.data.do >= 0 && request.resource.data.do <= 30
+    && request.resource.data.tan is number && request.resource.data.tan >= 0 && request.resource.data.tan <= 1000
+    && request.resource.data.temp is number && request.resource.data.temp >= 0 && request.resource.data.temp <= 60;
+  }
+  match /users/{userId}/chats/{chatId} {
+   allow read, delete: if owner(userId);
+   allow create, update: if owner(userId)
+    && request.resource.data.keys().hasOnly(['id','title','expert','messages','updated','deleted'])
+    && request.resource.data.id == chatId
+    && request.resource.data.title is string && request.resource.data.title.size() <= 120
+    && request.resource.data.expert is string
+    && request.resource.data.messages is list
+    && request.resource.data.updated is string
+    && request.resource.data.deleted is bool;
+  }
+ }
+}

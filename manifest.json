@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "AI AGROTECH All-in-One",
+  "short_name": "AI AGROTECH",
+  "description": "Hab pertanian, bioflok, ejen AI, kewangan dan pemasaran.",
+  "lang": "ms-MY",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#061b16",
+  "theme_color": "#07251e",
+  "icons": [
+    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+    {"src":"./icons/icon-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}
+  ]
+}
