@@ -235,7 +235,7 @@ async function startCompany(){
   const app=appModule.getApps().find(a=>a.name==='agrotech-company-v2')||appModule.initializeApp(firebaseConfig,'agrotech-company-v2');
   const auth=authModule.getAuth(app);
   await authModule.setPersistence(auth,authModule.browserLocalPersistence);
-  cloud={app,auth,authModule,fs,db:fs.initializeFirestore(app,{experimentalForceLongPolling:true}};
+  cloud={app,auth,authModule,fs,db:fs.getFirestore(app)};
   authModule.onAuthStateChanged(auth,observeStaff,showCompanyError);
   return cloud;
  })();
